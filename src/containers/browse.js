@@ -3,7 +3,7 @@ import  React, { useContext, useState, useEffect } from 'react';
 import Fuse from 'fuse.js';
 import { FirebaseContext } from '../context/firebase';
 import { SelectProfileContainer } from './profiles';
-import { Card, Header, Loading } from '../components';
+import { Header, Loading } from '../components';
 import * as ROUTES from '../constants/routes';
 import logo from '../logo.svg';
 import { FooterContainer } from './footer';
