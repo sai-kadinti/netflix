@@ -1,0 +1,117 @@
+pipeline 
+{
+    agent { label "main" }
+
+    environment 
+    {
+        GIT_REPO_URL =  'https://github.com/sai-kadinti/netflix.git'
+        GIT_BRANCH = 'master'
+        DEV_SERVER_IP  = "52.91.162.84"
+        JENKINS_SERVER_IP= "52.5.229.25"
+        SONARQUBE_IPADDRESS = "http://52.91.162.84:9000/"
+        SONARQUBE_TOKEN = "squ_ccb0d1ce68936479547512162c5d5f24ca606bea"
+        DOCKERHUB_USER = 'kadintisai'
+        DOCKERHUB_PASS = credentials('docker_pwd')
+        HOST_PORT = '8888'
+        SKIP_STAGE = 'true'
+    }
+
+    stages {
+        stage('Download source code') 
+        {
+            steps 
+            {
+                git branch: "${GIT_BRANCH}" , url: "${GIT_REPO_URL}"
+                sh 'echo "Present working Directory: $(pwd)"'
+                sh 'echo "List of files: $(ls -lrth)"'
+            }
+        }
+
+        stage('SonarQube Scan') 
+        {
+            when
+            {
+                expression { return env.SKIP_STAGE = 'true' }
+            }
+            steps 
+            {
+                echo "use != in when block to skip this step if need"
+                sh '''
+                    /opt/sonar-scanner/bin/sonar-scanner \
+                      -Dsonar.projectKey=web-ui-project \
+                      -Dsonar.sources=. \
+                      -Dsonar.host.url=${SONARQUBE_IPADDRESS} \
+                      -Dsonar.token=${SONARQUBE_TOKEN} \
+                      -Dsonar.sourceEncoding=UTF-8 \
+                      -Dsonar.exclusions=**/node_modules/**,**/*.min.js
+                '''
+            }
+        }
+        stage ("Installing dependencies")
+        {
+            steps 
+            {
+                sh "cd /home/ubuntu/jenkins/workspace/${JOB_NAME}"
+                sh "npm install"
+            }
+        }
+        stage ("Building Artifats")
+        {
+            steps
+            {
+                sh "sudo npm install -g n"
+                sh "sudo n 16"
+                sh "npm run build"
+                sh "ls -lrth"
+            }
+        }
+        stage ("Deploy in QA")
+        {
+            steps
+            {
+                sh 'ssh root@${JENKINS_SERVER_IP} "sudo rm -rf /var/www/html/*"'
+                sh 'scp -r build/* root@${JENKINS_SERVER_IP}:/var/www/html/'
+                sh 'ssh root@${JENKINS_SERVER_IP} "sudo systemctl restart nginx"'
+                echo "Access it via: http://${JENKINS_SERVER_IP}/"
+            }
+        }
+        stage ('Create Docker image')
+        {
+            steps
+            {
+                sh "docker build -t ${DOCKERHUB_USER}/${JOB_NAME}:${BUILD_NUMBER} ."
+            }
+        }
+        stage ("Docker login")
+        {
+            steps 
+            {
+
+                sh 'docker login -u $DOCKERHUB_USER -p $DOCKERHUB_PASS'
+                sh 'echo "Docker login succeed"'
+            }
+        }
+        stage ("Push the image to DockerHub")
+        {
+            steps 
+            {
+                sh "docker push ${DOCKERHUB_USER}/${JOB_NAME}:${BUILD_NUMBER}"
+            }
+        }
+        stage ("Run the container")
+        {
+            steps
+            {
+                sh 'docker run --name ${JOB_NAME}_${BUILD_NUMBER} -p ${HOST_PORT}:80 -d ${DOCKERHUB_USER}/${JOB_NAME}:${BUILD_NUMBER}'
+            }
+        }
+        stage ('Access the service')
+        {
+            steps
+            {
+                echo "QA Server: http://${JENKINS_SERVER_IP}/"
+                echo "PROD Server: http://${DEV_SERVER_IP}:${HOST_PORT}/"
+            }
+        }
+    }
+}
