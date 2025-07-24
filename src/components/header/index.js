@@ -13,7 +13,7 @@ export default function Header({ bg = true, children, ...restProps }) {
 
 Header.Banner = function HeaderBanner({ children, ...restProps }) {
     
-    const [show, handleShow] = useState(false);
+    const [show] = useState(false);
     const [movie, setMovie] = useState([]);
 
     useEffect(() => {
