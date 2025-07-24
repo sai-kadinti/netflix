@@ -15,6 +15,11 @@ pipeline
         HOST_PORT = '8888'
         SKIP_STAGE = 'true'
     }
+    options 
+    {
+        skipStagesAfterUnstable()
+        timestamps()
+    }
 
     stages {
         stage('Download source code') 
@@ -22,8 +27,7 @@ pipeline
             steps 
             {
                 git branch: "${GIT_BRANCH}" , url: "${GIT_REPO_URL}"
-                sh 'echo "Present working Directory: $(pwd)"'
-                sh 'echo "List of files: $(ls -lrth)"'
+                sh 'echo "PWD: $(pwd)" && ls -lrth'
             }
         }
 
@@ -33,11 +37,15 @@ pipeline
             {
                 expression { return env.SKIP_STAGE = 'true' }
             }
+            environment 
+            {
+                SONAR_SCANNER_HOME = '/opt/sonar-scanner/bin'
+            }
             steps 
             {
                 echo "use != in when block to skip this step if need"
                 sh '''
-                    /opt/sonar-scanner/bin/sonar-scanner \
+                    ${SONAR_SCANNER_HOME}/sonar-scanner \
                       -Dsonar.projectKey=web-ui-project \
                       -Dsonar.sources=. \
                       -Dsonar.host.url=${SONARQUBE_IPADDRESS} \
@@ -51,27 +59,38 @@ pipeline
         {
             steps 
             {
-                sh "cd /home/ubuntu/jenkins/workspace/${JOB_NAME}"
-                sh "npm install"
+                dir("${env.WORKSPACE}")
+                {
+                    sh "npm install"
+                }
             }
         }
         stage ("Building Artifats")
         {
             steps
             {
-                sh "sudo npm install -g n"
-                sh "sudo n 16"
-                sh "npm run build"
-                sh "ls -lrth"
+                sh '''export NVM_DIR="$HOME/.nvm"
+                if [ ! -d "$NVM_DIR" ]; then
+                    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+                fi
+                . "$NVM_DIR/nvm.sh"
+                nvm install 16
+                nvm use 16
+                node -v
+                npm run build
+            '''
             }
         }
         stage ("Deploy in QA")
         {
             steps
             {
-                sh 'ssh root@${JENKINS_SERVER_IP} "sudo rm -rf /var/www/html/*"'
-                sh 'scp -r build/* root@${JENKINS_SERVER_IP}:/var/www/html/'
-                sh 'ssh root@${JENKINS_SERVER_IP} "sudo systemctl restart nginx"'
+                echo "🚀 Deploying build to QA server"
+                sh '''
+                    ssh root@${JENKINS_SERVER_IP} "rm -rf /var/www/html/*"
+                    scp -r build/* root@${JENKINS_SERVER_IP}:/var/www/html/
+                    ssh root@${JENKINS_SERVER_IP} "systemctl restart nginx"
+                '''
                 echo "Access it via: http://${JENKINS_SERVER_IP}/"
             }
         }
@@ -109,9 +128,20 @@ pipeline
         {
             steps
             {
-                echo "QA Server: http://${JENKINS_SERVER_IP}/"
-                echo "PROD Server: http://${DEV_SERVER_IP}:${HOST_PORT}/"
+                echo "📍 QA Server: http://${JENKINS_SERVER_IP}/"
+                echo "📍 PROD Server: http://${DEV_SERVER_IP}:${HOST_PORT}/"
             }
+        }
+    }
+    post
+    {
+        always
+        {
+            echo '✅ Pipeline execution completed.'
+        }
+        failure
+        {
+            echo '❌ Pipeline failed! Please check logs for details.'
         }
     }
 }
