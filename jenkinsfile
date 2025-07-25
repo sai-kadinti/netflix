@@ -6,13 +6,13 @@ pipeline
     {
         GIT_REPO_URL =  'https://github.com/sai-kadinti/netflix.git'
         GIT_BRANCH = 'master'
-        DEV_SERVER_IP  = "52.91.162.84"
-        JENKINS_SERVER_IP= "52.5.229.25"
-        SONARQUBE_IPADDRESS = "http://52.91.162.84:9000/"
+        DEV_SERVER_IP  = "3.83.66.78"
+        JENKINS_SERVER_IP= "13.222.235.18"
+        SONARQUBE_IPADDRESS = "http://3.83.66.78:9000/"
         SONARQUBE_TOKEN = "squ_ccb0d1ce68936479547512162c5d5f24ca606bea"
         DOCKERHUB_USER = 'kadintisai'
         DOCKERHUB_PASS = credentials('docker_pwd')
-        HOST_PORT = '8888'
+        HOST_PORT = '9999'
         SKIP_STAGE = 'true'
     }
     options 
