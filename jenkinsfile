@@ -87,9 +87,9 @@ pipeline
             {
                 echo "🚀 Deploying build to QA server"
                 sh '''
-                    ssh root@${JENKINS_SERVER_IP} "rm -rf /var/www/html/*"
-                    scp -r build/* root@${JENKINS_SERVER_IP}:/var/www/html/
-                    ssh root@${JENKINS_SERVER_IP} "systemctl restart nginx"
+                    ssh -o StrictHostKeyChecking=no root@${JENKINS_SERVER_IP} "rm -rf /var/www/html/*"
+                    scp -o StrictHostKeyChecking=no -r build/* root@${JENKINS_SERVER_IP}:/var/www/html/
+                    ssh -o StrictHostKeyChecking=no root@${JENKINS_SERVER_IP} "systemctl restart nginx"
                 '''
                 echo "Access it via: http://${JENKINS_SERVER_IP}/"
             }
