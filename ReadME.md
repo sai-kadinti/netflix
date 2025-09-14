@@ -7,7 +7,7 @@ Follow these steps to set up and run the Netflix clone application on your local
 Run the following commands to update the package list on your system:
 
 ```bash
-sudo apt update
+sudo apt-get  update
 ```
 
 ### 2. Install Required Packages
@@ -15,7 +15,7 @@ sudo apt update
 Install the necessary packages and dependencies for the application using the following command:
 
 ```bash
-sudo apt install -y curl dirmngr apt-transport-https lsb-release ca-certificates
+sudo apt-get install -y curl dirmngr apt-transport-https lsb-release ca-certificates
 ```
 
 ### 3. Install Node.js
